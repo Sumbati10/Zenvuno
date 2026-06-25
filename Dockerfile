@@ -17,8 +17,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create a non-root user
+# Create a non-root user first
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+
+# Copy Earth Engine credentials
+RUN mkdir -p /home/appuser/.config/earthengine
+COPY ee-credentials /home/appuser/.config/earthengine/credentials
+RUN chown -R appuser:appuser /home/appuser/.config
+
 USER appuser
 
 # Expose port

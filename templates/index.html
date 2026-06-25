@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zenvuno - Vegetation Health Monitoring</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Zenvuno - Satellite Intelligence Platform</title>
     
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Leaflet Draw CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         * {
@@ -18,412 +19,688 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
         }
         
-        #map {
-            height: 100vh;
-            width: 100%;
-        }
-        
-        .sidebar {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 350px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            padding: 20px;
-            z-index: 1000;
-            max-height: calc(100vh - 40px);
-            overflow-y: auto;
-        }
-        
-        .sidebar h1 {
-            font-size: 24px;
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-        
-        .sidebar p {
-            color: #666;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        
-        .btn {
-            background: #27ae60;
+        header {
+            background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
             color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            width: 100%;
-            margin-bottom: 10px;
-            transition: background 0.3s;
-        }
-        
-        .btn:hover {
-            background: #219a52;
-        }
-        
-        .btn:disabled {
-            background: #95a5a6;
-            cursor: not-allowed;
-        }
-        
-        .date-inputs {
+            padding: 20px 40px;
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        .date-inputs input {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        
-        .results {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #eee;
-            display: none;
-        }
-        
-        .results.active {
-            display: block;
-        }
-        
-        .ndvi-value {
-            font-size: 36px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-        
-        .ndvi-status {
-            font-size: 18px;
-            padding: 8px 12px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            color: white;
-            font-weight: 500;
-        }
-        
-        .legend {
-            margin-top: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 6px;
-        }
-        
-        .legend h3 {
-            font-size: 14px;
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-        
-        .legend-item {
+        header h1 {
+            font-size: 28px;
+            font-weight: 700;
             display: flex;
             align-items: center;
-            margin-bottom: 8px;
-            font-size: 12px;
+            gap: 12px;
         }
         
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 3px;
-            margin-right: 10px;
-        }
-        
-        .timeseries {
-            margin-top: 15px;
-        }
-        
-        .timeseries h3 {
+        header .subtitle {
             font-size: 14px;
-            margin-bottom: 10px;
-            color: #2c3e50;
+            opacity: 0.9;
+            font-weight: 400;
+            margin-top: 4px;
         }
         
-        .timeseries-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
+        .header-actions {
+            display: flex;
+            gap: 12px;
         }
         
-        .timeseries-table th,
-        .timeseries-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        
-        .timeseries-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-        
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-        
-        .instructions {
-            background: #e8f5e8;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 15px;
+        .header-btn {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
             font-size: 13px;
-            color: #2c3e50;
+            font-weight: 500;
+            transition: all 0.2s;
         }
         
-        .instructions ol {
-            margin-left: 20px;
+        .header-btn:hover {
+            background: rgba(255,255,255,0.25);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+        
+        .hero-section {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .hero-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #0f766e;
+            margin-bottom: 16px;
+        }
+        
+        .hero-subtitle {
+            font-size: 16px;
+            color: #64748b;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+        
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-top: 32px;
+        }
+        
+        .stat-card {
+            background: #f8fafc;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #0f766e;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #64748b;
             margin-top: 8px;
         }
         
-        .instructions li {
-            margin-bottom: 5px;
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .analysis-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+        
+        .analysis-card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .analysis-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 12px;
+        }
+        
+        .card-description {
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .card-features {
+            list-style: none;
+        }
+        
+        .card-features li {
+            font-size: 13px;
+            color: #475569;
+            padding: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .card-features li::before {
+            content: "✓";
+            color: #0f766e;
+            font-weight: 700;
+        }
+        
+        .cta-section {
+            background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+            border-radius: 16px;
+            padding: 48px;
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        .cta-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        
+        .cta-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 32px;
+        }
+        
+        .cta-btn {
+            background: white;
+            color: #0f766e;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .cta-btn:hover {
+            background: #f8fafc;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+        
+        .feature-item {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 16px;
+        }
+        
+        .feature-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        
+        .feature-description {
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
+    <header>
+        <div>
+            <h1>🛰️ Zenvuno</h1>
+            <div class="subtitle">AI-Powered Satellite Intelligence Platform</div>
+        </div>
+        <div class="header-actions">
+            <button class="header-btn">📊 Dashboard</button>
+            <button class="header-btn">📈 Analytics</button>
+            <button class="header-btn">📥 Exports</button>
+        </div>
+    </header>
     
-    <div class="sidebar">
-        <h1>🌱 Zenvuno</h1>
-        <p>Vegetation Health Monitoring</p>
-        
-        <div class="instructions">
-            <strong>How to use:</strong>
-            <ol>
-                <li>Use the drawing tools (pentagon icon) on the map</li>
-                <li>Draw a polygon around your farm area</li>
-                <li>Click "Calculate NDVI" to analyze</li>
-            </ol>
-        </div>
-        
-        <div class="date-inputs">
-            <div>
-                <label style="font-size: 12px; color: #666;">Start Date</label>
-                <input type="date" id="startDate" value="2024-01-01">
-            </div>
-            <div>
-                <label style="font-size: 12px; color: #666;">End Date</label>
-                <input type="date" id="endDate" value="2025-01-01">
-            </div>
-        </div>
-        
-        <button class="btn" id="calculateBtn" onclick="calculateNDVI()" disabled>
-            📊 Calculate NDVI
-        </button>
-        
-        <div id="error" class="error" style="display: none;"></div>
-        <div id="loading" class="loading" style="display: none;">
-            Calculating NDVI... This may take a moment.
-        </div>
-        
-        <div id="results" class="results">
-            <div class="ndvi-value" id="ndviValue">0.000</div>
-            <div class="ndvi-status" id="ndviStatus">Status</div>
+    <div class="container">
+        <div class="hero-section">
+            <h1 class="hero-title">Transform Satellite Data into Actionable Insights</h1>
+            <p class="hero-subtitle">
+                Leverage our AI-powered platform to analyze vegetation health, monitor crop performance, 
+                and make data-driven decisions for your agricultural operations. Access near-real-time 
+                NDVI analysis, historical trend data, and precision agriculture tools.
+            </p>
             
-            <div class="legend">
-                <h3>NDVI Scale</h3>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #8B4513;"></div>
-                    <span>&lt; 0.2 - Bare soil / very sparse vegetation</span>
+            <div class="hero-stats">
+                <div class="stat-card">
+                    <div class="stat-value">20+</div>
+                    <div class="stat-label">Satellite Constellations</div>
                 </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #FFFF00;"></div>
-                    <span>0.2–0.4 - Low vegetation</span>
+                <div class="stat-card">
+                    <div class="stat-value">10m</div>
+                    <div class="stat-label">High Resolution</div>
                 </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #90EE90;"></div>
-                    <span>0.4–0.6 - Moderate vegetation</span>
+                <div class="stat-card">
+                    <div class="stat-value">24/7</div>
+                    <div class="stat-label">Near Real-Time Data</div>
                 </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #228B22;"></div>
-                    <span>0.6–0.8 - Healthy vegetation</span>
+                <div class="stat-card">
+                    <div class="stat-value">AI</div>
+                    <div class="stat-label">Powered Analysis</div>
                 </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #006400;"></div>
-                    <span>&gt; 0.8 - Very dense vegetation</span>
-                </div>
+            </div>
+        </div>
+        
+        <h2 class="section-title">🌾 Crop Monitoring Capabilities</h2>
+        <div class="analysis-cards">
+            <div class="analysis-card" onclick="showAnalysisSection()">
+                <div class="card-icon" style="background: #ecfdf5; color: #0f766e;">📊</div>
+                <h3 class="card-title">NDVI Analysis</h3>
+                <p class="card-description">
+                    Monitor vegetation health with near-real-time NDVI indexes. Track crop growth stages 
+                    and identify areas requiring attention.
+                </p>
+                <ul class="card-features">
+                    <li>Real-time vegetation monitoring</li>
+                    <li>Growth stage tracking</li>
+                    <li>Health status alerts</li>
+                    <li>Historical comparison</li>
+                </ul>
             </div>
             
-            <div class="timeseries">
-                <h3>Monthly NDVI Time Series</h3>
-                <table class="timeseries-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>NDVI</th>
-                        </tr>
-                    </thead>
-                    <tbody id="timeseriesBody">
-                    </tbody>
-                </table>
+            <div class="analysis-card">
+                <div class="card-icon" style="background: #fef3c7; color: #d97706;">🚨</div>
+                <h3 class="card-title">Change Detection</h3>
+                <p class="card-description">
+                    Receive instant alerts for sudden NDVI drops indicating crop stress, disease, 
+                    or irrigation issues. Take proactive measures before yield loss occurs.
+                </p>
+                <ul class="card-features">
+                    <li>Automated stress detection</li>
+                    <li>Customizable alert thresholds</li>
+                    <li>Multi-period comparison</li>
+                    <li>Severity classification</li>
+                </ul>
+            </div>
+            
+            <div class="analysis-card">
+                <div class="card-icon" style="background: #dbeafe; color: #1d4ed8;">🗺️</div>
+                <h3 class="card-title">Variable Rate Application</h3>
+                <p class="card-description">
+                    Generate precision agriculture zones for targeted fertilizer and input application. 
+                    Optimize resource use and maximize yield potential.
+                </p>
+                <ul class="card-features">
+                    <li>Productivity zone mapping</li>
+                    <li>Application rate recommendations</li>
+                    <li>Cost optimization</li>
+                    <li>Yield potential analysis</li>
+                </ul>
+            </div>
+            
+            <div class="analysis-card">
+                <div class="card-icon" style="background: #fce7f3; color: #be185d;">🌾</div>
+                <h3 class="card-title">Desiccation Planning</h3>
+                <p class="card-description">
+                    Analyze field maturity zones to optimize harvest timing. Apply drying agents 
+                    strategically for uniform crop maturation.
+                </p>
+                <ul class="card-features">
+                    <li>Maturity zone analysis</li>
+                    <li>Harvest timing optimization</li>
+                    <li>Desiccant strategy planning</li>
+                    <li>Uniformity recommendations</li>
+                </ul>
+            </div>
+            
+            <div class="analysis-card">
+                <div class="card-icon" style="background: #e0e7ff; color: #4338ca;">🌱</div>
+                <h3 class="card-title">Growth Regulator Zones</h3>
+                <p class="card-description">
+                    Map growth vigor zones for targeted plant growth regulator application. 
+                    Control lodging and optimize crop architecture.
+                </p>
+                <ul class="card-features">
+                    <li>Growth vigor classification</li>
+                    <li>PGR rate recommendations</li>
+                    <li>Lodging risk assessment</li>
+                    <li>Uniformity targeting</li>
+                </ul>
+            </div>
+            
+            <div class="analysis-card">
+                <div class="card-icon" style="background: #f3e8ff; color: #7c3aed;">🌾</div>
+                <h3 class="card-title">Crop-Specific Analysis</h3>
+                <p class="card-description">
+                    Compare your field's NDVI values against expected ranges for 10+ crop types 
+                    across different growth stages. Identify underperforming areas.
+                </p>
+                <ul class="card-features">
+                    <li>10+ crop type support</li>
+                    <li>Growth stage benchmarks</li>
+                    <li>Performance comparison</li>
+                    <li>Deviation alerts</li>
+                </ul>
+            </div>
+        </div>
+        
+        <h2 class="section-title">🔬 Advanced Analytics</h2>
+        <div class="features-grid">
+            <div class="feature-item">
+                <div class="feature-icon">📈</div>
+                <h3 class="feature-title">Historical Trend Analysis</h3>
+                <p class="feature-description">
+                    Analyze multi-year NDVI trends to identify long-term patterns, assess field performance, 
+                    and make informed decisions for future seasons.
+                </p>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">🚨</div>
+                <h3 class="feature-title">Seasonal Anomaly Detection</h3>
+                <p class="feature-description">
+                    Detect unusual vegetation patterns using statistical analysis. Identify areas that deviate 
+                    from expected seasonal behavior for early intervention.
+                </p>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">�</div>
+                <h3 class="feature-title">Data Export</h3>
+                <p class="feature-description">
+                    Export analysis-ready data in multiple formats including GeoJSON, SHP, KML, and PDF reports. 
+                    Integrate with your existing GIS workflows.
+                </p>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">�</div>
+                <h3 class="feature-title">Multi-Index Analysis</h3>
+                <p class="feature-description">
+                    Monitor your fields using 9 different vegetation indexes including NDVI, NDRE, MSAVI, RECI, 
+                    PRI, MCARI, NDMI, SMI, and NDWI for comprehensive crop health assessment.
+                </p>
+            </div>
+        </div>
+        
+        <div class="cta-section">
+            <h2 class="cta-title">Ready to Transform Your Agriculture Operations?</h2>
+            <p class="cta-subtitle">
+                Get started with our satellite intelligence platform and make data-driven decisions for your fields.
+            </p>
+            <button class="cta-btn" onclick="showIndexSelector()">Select Vegetation Index</button>
+        </div>
+        
+        <!-- NDVI Analysis Section -->
+        <div id="analysisSection" style="display: none; background: white; border-radius: 16px; padding: 40px; margin-bottom: 40px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="font-size: 24px; font-weight: 700; color: #0f766e;">📊 NDVI Analysis</h2>
+                <button onclick="hideAnalysisSection()" style="background: #e2e8f0; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Close</button>
+            </div>
+            
+            <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                <div>
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Field Name</label>
+                    <input type="text" id="analysisFieldName" placeholder="Enter field name" style="width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Crop Type</label>
+                    <select id="analysisCropType" style="width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <option value="">Select crop type...</option>
+                        <option value="corn">Corn</option>
+                        <option value="wheat">Wheat</option>
+                        <option value="soybean">Soybean</option>
+                        <option value="rice">Rice</option>
+                        <option value="cotton">Cotton</option>
+                        <option value="sugarcane">Sugarcane</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Field Coordinates (GeoJSON Polygon)</label>
+                <textarea id="analysisCoordinates" rows="3" placeholder='[[-37.9062, -0.0236], [-37.8062, -0.0236], [-37.8062, 0.0236], [-37.9062, 0.0236], [-37.9062, -0.0236]]' style="width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: monospace;"></textarea>
+                <p style="font-size: 12px; color: #64748b; margin-top: 6px;">Enter polygon coordinates as [longitude, latitude] pairs</p>
+            </div>
+            
+            <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                <div>
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Start Date</label>
+                    <input type="date" id="analysisStartDate" style="width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">End Date</label>
+                    <input type="date" id="analysisEndDate" style="width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Vegetation Index</label>
+                    <select id="analysisIndexType" style="width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <option value="NDVI">NDVI</option>
+                        <option value="NDRE">NDRE</option>
+                        <option value="MSAVI">MSAVI</option>
+                        <option value="RECI">RECI</option>
+                        <option value="NDMI">NDMI</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button class="btn" onclick="performAnalysis()" style="width: auto; padding: 12px 24px;">Calculate Index</button>
+            <button class="btn btn-secondary" onclick="loadAnalysisSampleData()" style="width: auto; padding: 12px 24px;">Load Sample Data</button>
+            
+            <div id="analysisError" style="background: #fee2e2; color: #b91c1c; padding: 12px 16px; border-radius: 8px; margin-top: 20px; display: none;"></div>
+            <div id="analysisLoading" style="text-align: center; padding: 20px; color: #64748b; display: none;">Calculating vegetation index...</div>
+            
+            <div id="analysisResults" style="display: none; margin-top: 24px;">
+                <div style="font-size: 36px; font-weight: 700; color: #0f766e; margin-bottom: 8px;" id="analysisIndexValue">0.000</div>
+                <div style="font-size: 18px; font-weight: 600; padding: 10px 20px; border-radius: 8px; display: inline-block; margin-bottom: 20px;" id="analysisIndexStatus">Status</div>
+                
+                <div id="analysisAlert" style="padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; display: none;"></div>
+                
+                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-top: 24px;">
+                    <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 12px; color: #64748b;">Field</div>
+                        <div style="font-size: 18px; font-weight: 700;" id="analysisResultField">-</div>
+                    </div>
+                    <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 12px; color: #64748b;">Crop</div>
+                        <div style="font-size: 18px; font-weight: 700;" id="analysisResultCrop">-</div>
+                    </div>
+                    <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 12px; color: #64748b;">Index</div>
+                        <div style="font-size: 18px; font-weight: 700;" id="analysisResultIndex">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="indexSelectorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+            <div style="background: white; border-radius: 16px; padding: 40px; max-width: 800px; max-height: 80vh; overflow-y: auto;">
+                <h2 style="font-size: 24px; font-weight: 700; color: #0f766e; margin-bottom: 24px;">Select Vegetation Index</h2>
+                <div id="indexList"></div>
+                <button onclick="closeIndexSelector()" style="margin-top: 24px; padding: 12px 24px; background: #e2e8f0; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">Close</button>
             </div>
         </div>
     </div>
     
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Leaflet Draw JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-    
     <script>
-        // Initialize map centered on Kenya
-        const map = L.map('map').setView([-0.0236, 37.9062], 6);
+        // Set default dates for analysis (historical data from 2024)
+        document.getElementById('analysisStartDate').value = '2024-01-01';
+        document.getElementById('analysisEndDate').value = '2024-12-31';
         
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-        
-        // Initialize draw control
-        const drawnItems = new L.FeatureGroup();
-        map.addLayer(drawnItems);
-        
-        const drawControl = new L.Control.Draw({
-            draw: {
-                polygon: {
-                    allowIntersection: false,
-                    showArea: true
-                },
-                rectangle: true,
-                circle: false,
-                circlemarker: false,
-                marker: false,
-                polyline: false
-            },
-            edit: {
-                featureGroup: drawnItems
-            }
-        });
-        map.addControl(drawControl);
-        
-        let currentPolygon = null;
-        
-        // Handle draw events
-        map.on(L.Draw.Event.CREATED, function(event) {
-            const layer = event.layer;
-            drawnItems.clearLayers();
-            drawnItems.addLayer(layer);
-            
-            if (event.layerType === 'polygon' || event.layerType === 'rectangle') {
-                currentPolygon = layer.getLatLngs()[0];
-                document.getElementById('calculateBtn').disabled = false;
-            }
-        });
-        
-        map.on(L.Draw.Event.DELETED, function(event) {
-            currentPolygon = null;
-            document.getElementById('calculateBtn').disabled = true;
-            document.getElementById('results').classList.remove('active');
-        });
-        
-        // Convert Leaflet LatLng to coordinate array
-        function latLngToCoords(latLngs) {
-            return latLngs.map(ll => [ll.lng, ll.lat]);
+        function showAnalysisSection() {
+            document.getElementById('analysisSection').style.display = 'block';
+            document.getElementById('analysisSection').scrollIntoView({ behavior: 'smooth' });
         }
         
-        // Calculate NDVI
-        async function calculateNDVI() {
-            if (!currentPolygon) {
-                showError('Please draw a polygon first');
+        function hideAnalysisSection() {
+            document.getElementById('analysisSection').style.display = 'none';
+        }
+        
+        function loadAnalysisSampleData() {
+            document.getElementById('analysisFieldName').value = 'Sample Field - Kenya';
+            document.getElementById('analysisCropType').value = 'corn';
+            document.getElementById('analysisCoordinates').value = '[[-37.9062, -0.0236], [-37.8062, -0.0236], [-37.8062, 0.0236], [-37.9062, 0.0236], [-37.9062, -0.0236]]';
+        }
+        
+        async function performAnalysis() {
+            const fieldName = document.getElementById('analysisFieldName').value || 'Unnamed Field';
+            const cropType = document.getElementById('analysisCropType').value || 'unknown';
+            const coordinatesText = document.getElementById('analysisCoordinates').value;
+            const startDate = document.getElementById('analysisStartDate').value;
+            const endDate = document.getElementById('analysisEndDate').value;
+            const indexType = document.getElementById('analysisIndexType').value;
+            
+            if (!coordinatesText) {
+                showAnalysisError('Please enter field coordinates');
                 return;
             }
             
-            const coordinates = latLngToCoords(currentPolygon);
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
+            try {
+                const coordinates = JSON.parse(coordinatesText);
+                if (!Array.isArray(coordinates) || coordinates.length < 3) {
+                    showAnalysisError('Invalid coordinates. Please provide at least 3 coordinate pairs.');
+                    return;
+                }
+            } catch (e) {
+                showAnalysisError('Invalid coordinates format. Please use JSON format: [[lon1, lat1], [lon2, lat2], ...]');
+                return;
+            }
             
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('error').style.display = 'none';
-            document.getElementById('calculateBtn').disabled = true;
+            document.getElementById('analysisLoading').style.display = 'block';
+            document.getElementById('analysisError').style.display = 'none';
+            document.getElementById('analysisResults').style.display = 'none';
             
             try {
-                const response = await fetch('/api/calculate-ndvi', {
+                const response = await fetch('/api/calculate-vegetation-index', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        coordinates: coordinates,
+                        coordinates: JSON.parse(coordinatesText),
                         start_date: startDate,
-                        end_date: endDate
+                        end_date: endDate,
+                        index: indexType
                     })
                 });
                 
                 const data = await response.json();
                 
                 if (response.ok) {
-                    displayResults(data);
+                    displayAnalysisResults(data, fieldName, cropType);
                 } else {
-                    showError(data.error || 'Failed to calculate NDVI');
+                    showAnalysisError(data.error || 'Failed to calculate vegetation index');
                 }
             } catch (error) {
-                showError('Error: ' + error.message);
+                showAnalysisError('Error: ' + error.message);
             } finally {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('calculateBtn').disabled = false;
+                document.getElementById('analysisLoading').style.display = 'none';
             }
         }
         
-        function displayResults(data) {
-            document.getElementById('ndviValue').textContent = data.current_ndvi.toFixed(3);
+        function displayAnalysisResults(data, fieldName, cropType) {
+            document.getElementById('analysisIndexValue').textContent = data.current_value.toFixed(3);
             
-            const statusDiv = document.getElementById('ndviStatus');
+            const statusDiv = document.getElementById('analysisIndexStatus');
             statusDiv.textContent = data.status;
             statusDiv.style.background = data.color;
+            statusDiv.style.color = 'white';
             
-            // Color the polygon on the map
-            if (drawnItems.getLayers().length > 0) {
-                drawnItems.getLayers()[0].setStyle({
-                    color: data.color,
-                    fillColor: data.color,
-                    fillOpacity: 0.3
-                });
+            document.getElementById('analysisResultField').textContent = fieldName;
+            document.getElementById('analysisResultCrop').textContent = cropType.charAt(0).toUpperCase() + cropType.slice(1);
+            document.getElementById('analysisResultIndex').textContent = data.index_name;
+            
+            // Show alerts based on status
+            const alertDiv = document.getElementById('analysisAlert');
+            alertDiv.classList.remove('active');
+            alertDiv.style.display = 'none';
+            
+            if (data.status.includes('Low') || data.status.includes('Stress')) {
+                alertDiv.style.display = 'block';
+                alertDiv.style.background = '#fee2e2';
+                alertDiv.style.border = '1px solid #ef4444';
+                alertDiv.style.color = '#b91c1c';
+                alertDiv.textContent = '⚠️ Alert: ' + data.status + ' detected. Immediate attention may be required.';
+            } else if (data.status.includes('Moderate')) {
+                alertDiv.style.display = 'block';
+                alertDiv.style.background = '#fef3c7';
+                alertDiv.style.border = '1px solid #fbbf24';
+                alertDiv.style.color = '#92400e';
+                alertDiv.textContent = '⚡ Warning: ' + data.status + '. Monitor closely and consider intervention.';
+            } else {
+                alertDiv.style.display = 'block';
+                alertDiv.style.background = '#d1fae5';
+                alertDiv.style.border = '1px solid #10b981';
+                alertDiv.style.color = '#065f46';
+                alertDiv.textContent = '✅ Good: ' + data.status + '. Continue current management practices.';
             }
             
-            // Display time series
-            const tbody = document.getElementById('timeseriesBody');
-            tbody.innerHTML = '';
-            
-            data.timeseries.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${row.date}</td>
-                    <td>${row.NDVI.toFixed(3)}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-            
-            document.getElementById('results').classList.add('active');
+            document.getElementById('analysisResults').style.display = 'block';
         }
         
-        function showError(message) {
-            const errorDiv = document.getElementById('error');
+        function showAnalysisError(message) {
+            const errorDiv = document.getElementById('analysisError');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
+        }
+        
+        async function showIndexSelector() {
+            const modal = document.getElementById('indexSelectorModal');
+            const indexList = document.getElementById('indexList');
+            
+            try {
+                const response = await fetch('/api/vegetation-indexes');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let indexHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">';
+                    
+                    data.indexes.forEach(index => {
+                        const desc = data.descriptions[index];
+                        indexHtml += `
+                            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#0f766e'" onmouseout="this.style.borderColor='#e2e8f0'">
+                                <h3 style="font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">${index}</h3>
+                                <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">${desc.description}</p>
+                                <p style="font-size: 12px; color: #475569; margin-bottom: 8px;"><strong>Best Use:</strong> ${desc.best_use}</p>
+                                <p style="font-size: 12px; color: #475569; margin-bottom: 8px;"><strong>Range:</strong> ${desc.range}</p>
+                                <div style="height: 8px; background: linear-gradient(to right, ${desc.color_scale.replace(',', ', ')}); border-radius: 4px; margin-top: 12px;"></div>
+                            </div>
+                        `;
+                    });
+                    
+                    indexHtml += '</div>';
+                    indexList.innerHTML = indexHtml;
+                    modal.style.display = 'flex';
+                }
+            } catch (error) {
+                console.error('Error loading indexes:', error);
+            }
+        }
+        
+        function closeIndexSelector() {
+            document.getElementById('indexSelectorModal').style.display = 'none';
         }
     </script>
 </body>

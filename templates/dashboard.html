@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Zenvuno Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; }
+        header { background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%); color: white; padding: 20px 40px; }
+        header h1 { font-size: 24px; font-weight: 700; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px; }
+        .analysis-section { background: white; border-radius: 16px; padding: 40px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; }
+        .btn { background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .btn-secondary { background: white; color: #475569; border: 1px solid #e2e8f0; }
+        .results { display: none; margin-top: 24px; }
+        .results.active { display: block; }
+        .error { background: #fee2e2; color: #b91c1c; padding: 12px; border-radius: 8px; display: none; margin-top: 16px; }
+        .loading { text-align: center; padding: 20px; display: none; }
+        .ndvi-value { font-size: 36px; font-weight: 700; color: #0f766e; }
+        .status { font-size: 18px; font-weight: 600; padding: 10px 20px; border-radius: 8px; display: inline-block; color: white; }
+        #map { height: 600px; width: 100%; border-radius: 8px; margin-top: 24px; border: 3px solid #0f766e; background: #e5e7eb; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🛰️ Zenvuno Dashboard</h1>
+    </header>
+    
+    <div class="container">
+        <div class="analysis-section">
+            <h2 style="margin-bottom: 24px;">NDVI Analysis</h2>
+            
+            <div class="form-group">
+                <label>Field Name</label>
+                <input type="text" id="fieldName" placeholder="Enter field name">
+            </div>
+            
+            <div class="form-group">
+                <label>Crop Type</label>
+                <select id="cropType">
+                    <option value="corn">Corn</option>
+                    <option value="wheat">Wheat</option>
+                    <option value="soybean">Soybean</option>
+                    <option value="rice">Rice</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Coordinates</label>
+                <textarea id="coordinates" rows="3" placeholder='[[37.9062, -0.0236], [37.8062, -0.0236], [37.8062, 0.0236], [37.9062, 0.0236], [37.9062, -0.0236]]'></textarea>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="startDate" value="2024-01-01">
+                </div>
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" id="endDate" value="2024-12-31">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Vegetation Index</label>
+                <select id="indexType">
+                    <option value="NDVI">NDVI</option>
+                    <option value="NDRE">NDRE</option>
+                    <option value="MSAVI">MSAVI</option>
+                </select>
+            </div>
+            
+            <button class="btn" onclick="runAnalysis()">Calculate</button>
+            <button class="btn btn-secondary" onclick="loadSample()">Load Kenya Sample</button>
+            <button class="btn btn-secondary" onclick="loadNigeriaField()">Load Nigeria Field</button>
+            <button class="btn btn-secondary" onclick="loadNDVIImagery()">Load NDVI Imagery</button>
+            
+            <div id="error" class="error"></div>
+            <div id="loading" class="loading">Calculating...</div>
+            
+            <div id="map"></div>
+            
+            <div id="results" class="results">
+                <div class="ndvi-value" id="ndviValue">0.000</div>
+                <div class="status" id="status">Status</div>
+                <p style="margin-top: 16px;"><strong>Field:</strong> <span id="resultField">-</span></p>
+                <p><strong>Crop:</strong> <span id="resultCrop">-</span></p>
+                <p><strong>Index:</strong> <span id="resultIndex">-</span></p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        let map = null;
+        let ndviLayer = null;
+        
+        function loadSample() {
+            document.getElementById('fieldName').value = 'Kenya Field';
+            document.getElementById('cropType').value = 'corn';
+            document.getElementById('coordinates').value = '[[37.9062, -0.0236], [37.8062, -0.0236], [37.8062, 0.0236], [37.9062, 0.0236], [37.9062, -0.0236]]';
+        }
+        
+        function loadNigeriaField() {
+            document.getElementById('fieldName').value = 'Nigeria Field';
+            document.getElementById('cropType').value = 'rice';
+            // Extract simplified coordinates from the detailed array
+            const detailedCoords = [[[3.6321758, 8.2982563], [3.6321758, 8.2982563], [3.63214, 8.2982932], [3.6321007, 8.2983221], [3.6320525, 8.298365], [3.6319959, 8.2984238], [3.6319258, 8.2984688], [3.6318666, 8.2985644], [3.631817, 8.2986451], [3.6317788, 8.2987063], [3.6317368, 8.2987598], [3.6316905, 8.298792], [3.6316626, 8.2988327], [3.6316427, 8.298875], [3.6316165, 8.2989265], [3.6315654, 8.2989699], [3.6315324, 8.2990071], [3.6315009, 8.2990419], [3.63147, 8.299076], [3.6314336, 8.2991135], [3.6313888, 8.2991388], [3.6313674, 8.2991862], [3.631346, 8.2992298], [3.6313105, 8.2992626], [3.6313029, 8.2993074], [3.6312709, 8.2993441], [3.6312486, 8.2993876], [3.6312147, 8.2994208], [3.6311842, 8.2994622], [3.6311425, 8.2994874], [3.6311089, 8.2995224], [3.6310846, 8.2995638], [3.6310449, 8.2995976], [3.6310167, 8.2996417], [3.6309818, 8.2996747], [3.6309474, 8.2997089], [3.6309249, 8.2997564], [3.630893, 8.2997996], [3.6308526, 8.299835], [3.6308186, 8.2998715], [3.6307977, 8.2999187], [3.6307779, 8.2999676], [3.6307655, 8.3000119], [3.6307322, 8.3000467], [3.6307002, 8.3000918], [3.6306669, 8.3001282], [3.6306392, 8.3001703], [3.6306137, 8.3002087], [3.6305802, 8.3002455], [3.6305484, 8.3002891], [3.6305348, 8.3003372], [3.6305011, 8.3003714], [3.6304804, 8.3004206], [3.6304576, 8.3004629], [3.6304259, 8.3005054], [3.6304062, 8.3005489], [3.630367, 8.3005825], [3.6303376, 8.3006229], [3.6303013, 8.3006523], [3.6302677, 8.3006904], [3.6302419, 8.300728], [3.6302373, 8.300778], [3.6302058, 8.3008189], [3.630198, 8.3008651], [3.6301703, 8.3009063], [3.6301354, 8.3009417], [3.6301028, 8.3009891], [3.6300403, 8.301071], [3.6299996, 8.3011254], [3.6299504, 8.3011677], [3.6299209, 8.301213], [3.6299024, 8.3012564], [3.6298869, 8.3013027], [3.6298785, 8.3013576], [3.6298559, 8.3013987], [3.6298359, 8.30145], [3.6298254, 8.3015], [3.6298145, 8.301553], [3.6297856, 8.3015933], [3.6297569, 8.30164], [3.6297342, 8.3016869], [3.629723, 8.3017315], [3.629702, 8.3017791], [3.6296855, 8.3018245], [3.6296452, 8.3018657], [3.6296294, 8.301913], [3.6296102, 8.3019794], [3.6296119, 8.3020399], [3.6296154, 8.3020888], [3.6296179, 8.3021364], [3.6296186, 8.3021879], [3.6296221, 8.302234], [3.6296483, 8.3022891], [3.6296799, 8.3023437], [3.6296759, 8.3024379], [3.6297179, 8.3025291], [3.629732, 8.302621], [3.6297367, 8.3026864], [3.6297355, 8.3027451], [3.6297192, 8.3028039], [3.6297488, 8.3028642], [3.6297617, 8.3029286], [3.6297604, 8.3029742], [3.6297619, 8.30303], [3.6297267, 8.3030774], [3.6297114, 8.3031272], [3.6296817, 8.3031875], [3.6296649, 8.3032353], [3.6296309, 8.3032742], [3.6295997, 8.3033097], [3.6295772, 8.303362], [3.629549, 8.3033998], [3.629512, 8.3034352], [3.6295057, 8.3034849], [3.6294859, 8.3035327], [3.6294633, 8.3035741], [3.6294319, 8.3036181], [3.6294074, 8.3036592], [3.6293759, 8.3036944], [3.6293821, 8.3037395], [3.6293955, 8.3038021], [3.6293847, 8.3038605], [3.6293743, 8.3039245], [3.6293707, 8.3039887], [3.6293708, 8.304049], [3.6293692, 8.3041041], [3.6293713, 8.3041553], [3.6293756, 8.3042174], [3.6293572, 8.3042673], [3.6293243, 8.304308], [3.6292823, 8.304335], [3.6292492, 8.3043675], [3.629225, 8.304415], [3.6291871, 8.3044529], [3.6291492, 8.3045075], [3.6291289, 8.304556], [3.629121, 8.3046023], [3.6291125, 8.3046523], [3.6291132, 8.3046993], [3.6291292, 8.3047468], [3.6291095, 8.3047952], [3.6290899, 8.3048371], [3.6290651, 8.3048812], [3.629074, 8.3049289], [3.6290483, 8.3049917], [3.629033, 8.3050349], [3.6290142, 8.3050788], [3.6289835, 8.305124], [3.6289709, 8.3051773], [3.6289595, 8.3052319], [3.6289487, 8.3052917], [3.6289296, 8.3053432], [3.6288895, 8.3053787], [3.6288507, 8.3054223], [3.6288315, 8.3054671], [3.6288182, 8.3055187], [3.6288036, 8.3055703], [3.628765, 8.3056176], [3.6287483, 8.3056741], [3.6287208, 8.3057251], [3.6286988, 8.3057818], [3.6286873, 8.3058265], [3.6286754, 8.3058761], [3.6286548, 8.3059261], [3.6286463, 8.3059856], [3.6286535, 8.3060339], [3.6286989, 8.3060477], [3.6287444, 8.3060767], [3.628795, 8.3061017], [3.6288365, 8.3061308], [3.6288726, 8.3061594], [3.6289062, 8.3061939], [3.6289562, 8.3062264], [3.6289791, 8.3062714], [3.6289949, 8.3063171], [3.6290147, 8.3063658], [3.6290368, 8.3064136], [3.6290461, 8.3064674], [3.6290531, 8.3065149], [3.6290636, 8.3065657], [3.6290955, 8.3066142], [3.6291154, 8.3066564], [3.6291383, 8.3067035], [3.6291605, 8.3067494], [3.6291804, 8.3068013], [3.6292086, 8.306848], [3.6292363, 8.3068846], [3.629247, 8.3069313], [3.6292688, 8.3069881], [3.6292885, 8.3070429], [3.629313, 8.3070949], [3.6293401, 8.3071378], [3.6293674, 8.3071852], [3.6294002, 8.3072192], [3.6294502, 8.3072041], [3.6295118, 8.3072008], [3.6295726, 8.3072138], [3.6296318, 8.3072253], [3.6296873, 8.3072373], [3.6297294, 8.3072576], [3.6297818, 8.3072656], [3.6298354, 8.307293], [3.6298821, 8.3073101], [3.6299297, 8.3073336], [3.6299793, 8.3073467], [3.6300256, 8.307364], [3.6300566, 8.3074114], [3.6300976, 8.3074421], [3.630143, 8.3074527], [3.6301859, 8.3074804], [3.6302109, 8.3075186], [3.6302413, 8.3075532], [3.6302737, 8.3075885], [3.6303148, 8.3076167], [3.6303569, 8.3076352], [3.6303873, 8.3076751], [3.6303891, 8.3077283], [3.6303432, 8.3077531], [3.6303011, 8.3077729], [3.6302524, 8.3077707], [3.6302107, 8.3077922], [3.6301726, 8.3078202], [3.6301694, 8.3078664], [3.6301694, 8.3079126], [3.6301906, 8.3079559], [3.630238, 8.3079663], [3.6302894, 8.307979], [3.6303416, 8.3079919], [3.630388, 8.3079825], [3.6304436, 8.3079769], [3.6304943, 8.3079696], [3.6305462, 8.3079716], [3.6305908, 8.3079615], [3.6306135, 8.3079155], [3.6306208, 8.3078654], [3.6306402, 8.3078228], [3.6306899, 8.3078106], [3.6307231, 8.3078528], [3.6307677, 8.3078915], [3.6308085, 8.3079324], [3.6308318, 8.3079995], [3.6308823, 8.308101], [3.6309726, 8.3081625], [3.6310321, 8.3081863], [3.6310948, 8.3082121], [3.6311462, 8.3082262], [3.6311947, 8.30824], [3.6312619, 8.3082536], [3.631307, 8.3082685], [3.6313479, 8.3082888], [3.6313953, 8.3082779], [3.6314463, 8.3082648], [3.6314915, 8.3082448], [3.6315375, 8.3082258], [3.6315819, 8.3081886], [3.6316231, 8.3081671], [3.631656, 8.3081348], [3.6316878, 8.3080976], [3.6317157, 8.3080517], [3.6317306, 8.3080003], [3.6317718, 8.3079668], [3.6318192, 8.3079557], [3.6318703, 8.307975], [3.6319022, 8.30801], [3.6319436, 8.3080372], [3.6319877, 8.3080562], [3.6320359, 8.3080642], [3.6320752, 8.3080382], [3.6321232, 8.3080331], [3.6321607, 8.3080061], [3.6322033, 8.3079893], [3.6322521, 8.3079713], [3.6323023, 8.3079626], [3.6323478, 8.3079615], [3.6323932, 8.3079593], [3.6324396, 8.3079384], [3.6324853, 8.3079288], [3.6325299, 8.3079115], [3.6326148, 8.3078927], [3.6327022, 8.3078589], [3.632809, 8.3078222], [3.632913, 8.3077926], [3.6330028, 8.3077274], [3.6330819, 8.3076662], [3.6331794, 8.3076189], [3.6332538, 8.3075414], [3.6333264, 8.3074923], [3.6333779, 8.3074543], [3.633432, 8.3074184], [3.6334986, 8.3073789], [3.6335444, 8.3073471], [3.6335765, 8.3073007], [3.6336293, 8.3072552], [3.6336916, 8.3072147], [3.6337352, 8.3071835], [3.6338022, 8.3071485], [3.6338496, 8.3071064], [3.6338982, 8.3070811], [3.6339546, 8.3070464], [3.6340043, 8.3070137], [3.6340624, 8.306977], [3.6340964, 8.3069346], [3.6341598, 8.3068996], [3.6341953, 8.3068505], [3.6342611, 8.3068255], [3.6343022, 8.3067897], [3.6343658, 8.3067618], [3.6344165, 8.3067275], [3.6344739, 8.3066862], [3.6345222, 8.3066548], [3.6345769, 8.3066187], [3.6346189, 8.3065879], [3.6346716, 8.3065523], [3.634719, 8.3065104], [3.6347685, 8.3064702], [3.6348103, 8.3064346], [3.6348412, 8.3063991], [3.6348958, 8.3063563], [3.6349363, 8.3063164], [3.6349756, 8.306276], [3.6350189, 8.3062376], [3.6350755, 8.306194], [3.6351144, 8.3061541], [3.6351481, 8.3061133], [3.6351895, 8.306081], [3.6352405, 8.3060584], [3.6352858, 8.3060385], [3.635336, 8.3060302], [3.6353816, 8.3060191], [3.6354144, 8.3059849], [3.6354105, 8.3059379], [3.6353952, 8.3058889], [3.6353765, 8.3058429], [3.6353964, 8.3058], [3.635426, 8.3057653], [3.635449, 8.305724], [3.6354729, 8.3056817], [3.635474, 8.305636], [3.6354843, 8.3055854], [3.6355098, 8.3055434], [3.6355412, 8.3055096], [3.6355735, 8.305459], [3.6355981, 8.3054157], [3.6356272, 8.3053752], [3.6356799, 8.3053776], [3.6357245, 8.3053897], [3.635777, 8.3053864], [3.635759, 8.3053408], [3.6357587, 8.3052929], [3.6357567, 8.3052356], [3.6357422, 8.3051832], [3.6357557, 8.3051276], [3.6357668, 8.3050762], [3.6357719, 8.3050218], [3.6357855, 8.3049741], [3.6357777, 8.3049228], [3.635788, 8.304872], [3.635798, 8.3048118], [3.6358046, 8.3047518], [3.6358198, 8.3046985], [3.6358185, 8.304643], [3.6357898, 8.3045813], [3.6358094, 8.3045311], [3.6358331, 8.3044901], [3.6358421, 8.3044326], [3.6358215, 8.3043861], [3.6358254, 8.3043317], [3.635838, 8.3042787], [3.6358459, 8.3042247], [3.635857, 8.3041763], [3.6358681, 8.3041301], [3.6358918, 8.3040831], [3.6359335, 8.3040318], [3.6359587, 8.303983], [3.6359721, 8.3039331], [3.6359878, 8.3038819], [3.6360071, 8.3038294], [3.6360334, 8.3037856], [3.6360793, 8.3037501], [3.6360989, 8.3036987], [3.6361142, 8.3036466], [3.636147, 8.3035951], [3.6361716, 8.3035395], [3.6362007, 8.3034884], [3.6362396, 8.3034363], [3.6362773, 8.3034004], [3.6363204, 8.3033759], [3.6363766, 8.3033738], [3.6364302, 8.303373], [3.6364832, 8.3033564], [3.6365312, 8.3033304], [3.6365811, 8.3033402], [3.6366312, 8.3033263], [3.6366786, 8.3033132], [3.6367224, 8.3032965], [3.6367355, 8.3032531], [3.6367565, 8.3032126], [3.6367897, 8.30318], [3.636823, 8.3031443], [3.636853, 8.3031073], [3.6368565, 8.3030602], [3.6368743, 8.3030102], [3.6368999, 8.3029658], [3.6369237, 8.3029239], [3.6369391, 8.3028794], [3.636956, 8.3028358], [3.6369703, 8.3027837], [3.6369998, 8.3027423], [3.6370206, 8.3026932], [3.6370485, 8.302653], [3.6370671, 8.3026081], [3.6370208, 8.3025811], [3.6370089, 8.3025337], [3.6370056, 8.3024839], [3.6370222, 8.3024316], [3.6370046, 8.3023801], [3.6369956, 8.3023349], [3.6369827, 8.3022898], [3.6369819, 8.3022409], [3.636961, 8.3021964], [3.6369665, 8.3021487], [3.636997, 8.3021018], [3.6370047, 8.3020523], [3.6370293, 8.3020049], [3.6370737, 8.3019821], [3.6371204, 8.3019627], [3.6371709, 8.3019388], [3.6372449, 8.3019164], [3.6372895, 8.3019049], [3.6373424, 8.3018888], [3.6374037, 8.3018769], [3.6374526, 8.3018625], [3.6375132, 8.3018484], [3.6375685, 8.3018453], [3.6376068, 8.3018029], [3.637644, 8.301765], [3.63769, 8.3017219], [3.6377397, 8.3016769], [3.6377642, 8.301632], [3.6377566, 8.3015801], [3.6377683, 8.3015305], [3.6377728, 8.3014768], [3.6377618, 8.3014305], [3.6377566, 8.3013811], [3.6377403, 8.3013312], [3.6377312, 8.3012802], [3.6377496, 8.3012378], [3.6376994, 8.3012352], [3.6376516, 8.3012307], [3.6376479, 8.3011817], [3.6376418, 8.3011321], [3.6376411, 8.3010832], [3.6376293, 8.3010272], [3.6376078, 8.300978], [3.6375867, 8.3009366], [3.6375705, 8.3008876], [3.6375419, 8.3008342], [3.6375211, 8.3007788], [3.6374976, 8.3007306], [3.6374697, 8.3006915], [3.6374392, 8.300654], [3.6374056, 8.3006145], [3.6373731, 8.3005758], [3.6373311, 8.3005489], [3.6373121, 8.3005021], [3.6372719, 8.3004721], [3.6372316, 8.300432], [3.6372, 8.3003942], [3.6371575, 8.3003612], [3.6371181, 8.3003267], [3.6370799, 8.3002884], [3.6370318, 8.3002645], [3.6370055, 8.3002173], [3.6369788, 8.3001709], [3.6369752, 8.3001144], [3.6369651, 8.3000701], [3.6369212, 8.3000458], [3.6368903, 8.300009], [3.6368626, 8.2999728], [3.6368332, 8.2999355], [3.6367929, 8.2999016], [3.6367423, 8.2998872], [3.6367, 8.2998589], [3.6366596, 8.2998343], [3.636643, 8.2997835], [3.6366061, 8.2997445], [3.6365724, 8.2997133], [3.6365291, 8.2996916], [3.6364866, 8.299657], [3.6364435, 8.2996312], [3.6364071, 8.2995888], [3.6363698, 8.2995577], [3.6363382, 8.2995149], [3.6363064, 8.2994778], [3.6362613, 8.2994594], [3.6362135, 8.2994414], [3.6361715, 8.2994187], [3.6361186, 8.2994003], [3.6360684, 8.2993922], [3.6360157, 8.2993829], [3.6359621, 8.2993831], [3.6359113, 8.2993937], [3.635858, 8.299378], [3.6358104, 8.2993889], [3.6357622, 8.299397], [3.6357132, 8.2993857], [3.63567, 8.2993676], [3.6356219, 8.2993661], [3.6355694, 8.2993517], [3.6355235, 8.2993284], [3.6354794, 8.2993069], [3.6354451, 8.2992657], [3.6354076, 8.2992391], [3.6353714, 8.2992112], [3.6353389, 8.2991688], [3.6353031, 8.2991316], [3.635264, 8.2991052], [3.635232, 8.2990626], [3.6351951, 8.299024], [3.6351649, 8.2989883], [3.6351496, 8.2989408], [3.6351163, 8.2989058], [3.6350724, 8.2988827], [3.6350513, 8.2988351], [3.6350064, 8.2988175], [3.6349623, 8.2987911], [3.6349256, 8.2987627], [3.6348928, 8.298727], [3.6348522, 8.2986898], [3.6348364, 8.2986441], [3.6347953, 8.2986245], [3.6347444, 8.2986171], [3.6346927, 8.2986186], [3.6346431, 8.2986105], [3.6345933, 8.2986142], [3.6345466, 8.2985883], [3.6345123, 8.2985568], [3.6344732, 8.298531], [3.6344375, 8.2984994], [3.6344015, 8.2984637], [3.6343555, 8.2984417], [3.6343145, 8.2984184], [3.634263, 8.2984214], [3.6342174, 8.2984018], [3.6341831, 8.2983597], [3.6341616, 8.2983191], [3.6341213, 8.2982857], [3.6340734, 8.2982585], [3.6340412, 8.2982261], [3.6340132, 8.2981831], [3.6339664, 8.2981612], [3.63391, 8.2981498], [3.6338612, 8.2981318], [3.6338123, 8.2981386], [3.6337807, 8.2980984], [3.6337317, 8.2980743], [3.6336954, 8.2980355], [3.6336803, 8.2979866], [3.6336355, 8.2979546], [3.6336022, 8.297922], [3.6335604, 8.2979005], [3.6335083, 8.2978859], [3.6334676, 8.2978646], [3.6334275, 8.2978391], [3.6333856, 8.2978196], [3.6333402, 8.2977935], [3.6332999, 8.2977719], [3.6332623, 8.2977424], [3.6332169, 8.2977066], [3.6331797, 8.2976769], [3.6331343, 8.2976541], [3.6330843, 8.297655], [3.6330375, 8.2976675], [3.6329889, 8.2976631], [3.6329719, 8.2977157], [3.6329415, 8.2976507], [3.6328576, 8.2976091], [3.632759, 8.2976555], [3.6321758, 8.2982563]]];
+            document.getElementById('coordinates').value = JSON.stringify(detailedCoords);
+        }
+        
+        async function runAnalysis() {
+            const coordinates = document.getElementById('coordinates').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const indexType = document.getElementById('indexType').value;
+            
+            if (!coordinates) {
+                showError('Please enter coordinates');
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('results').classList.remove('active');
+            
+            try {
+                let coords = JSON.parse(coordinates);
+                
+                // Handle triple-nested GeoJSON format [[[lon, lat], [lon, lat], ...]]
+                if (Array.isArray(coords) && coords.length > 0 && Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
+                    coords = coords[0]; // Extract the inner array
+                }
+                
+                const response = await fetch('/api/calculate-vegetation-index', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        coordinates: coords,
+                        start_date: startDate,
+                        end_date: endDate,
+                        index: indexType
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('ndviValue').textContent = data.current_value.toFixed(3);
+                    const statusDiv = document.getElementById('status');
+                    statusDiv.textContent = data.status;
+                    statusDiv.style.background = data.color;
+                    document.getElementById('resultField').textContent = document.getElementById('fieldName').value;
+                    document.getElementById('resultCrop').textContent = document.getElementById('cropType').value;
+                    document.getElementById('resultIndex').textContent = data.index_name;
+                    
+                    // Initialize map with satellite imagery (tile_url may be empty if no data available)
+                    initializeMap(data.polygon, data.tile_url || '');
+                    
+                    document.getElementById('results').classList.add('active');
+                } else {
+                    showError(data.error || 'Analysis failed');
+                }
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        async function loadNDVIImagery() {
+            const coordinates = document.getElementById('coordinates').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const indexType = document.getElementById('indexType').value;
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            
+            try {
+                let coords = JSON.parse(coordinates);
+                
+                // Handle triple-nested GeoJSON format
+                if (Array.isArray(coords) && coords.length > 0 && Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
+                    coords = coords[0];
+                }
+                
+                const response = await fetch('/api/calculate-vegetation-index', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        coordinates: coords,
+                        start_date: startDate,
+                        end_date: endDate,
+                        index: indexType
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    initializeMap(coords, data.tile_url || '');
+                    document.getElementById('results').classList.add('active');
+                    document.getElementById('ndviValue').textContent = data.current_value.toFixed(3);
+                    const statusDiv = document.getElementById('status');
+                    statusDiv.textContent = data.status;
+                    statusDiv.style.background = data.color;
+                    document.getElementById('resultField').textContent = document.getElementById('fieldName').value || 'Unknown';
+                    document.getElementById('resultCrop').textContent = document.getElementById('cropType').value || 'Unknown';
+                    document.getElementById('resultIndex').textContent = data.index_name;
+                } else {
+                    showError(data.error || 'Failed to load NDVI imagery');
+                }
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        function initializeMap(polygon, tileUrl) {
+            console.log('initializeMap called with polygon:', polygon);
+            
+            if (map) {
+                map.remove();
+            }
+            
+            // Calculate center point from polygon
+            const lats = polygon.map(coord => coord[1]);
+            const lngs = polygon.map(coord => coord[0]);
+            const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+            const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+            
+            console.log('Center:', centerLat, centerLng);
+            
+            // Initialize map
+            map = L.map('map').setView([centerLat, centerLng], 15);
+            
+            console.log('Map initialized');
+            
+            // Add Google Satellite imagery
+            L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                attribution: 'Google Satellite',
+                maxZoom: 20
+            }).addTo(map);
+            
+            console.log('Satellite basemap added');
+            
+            // Add NDVI overlay if available
+            if (tileUrl && tileUrl !== '') {
+                try {
+                    const ndviLayer = L.tileLayer(tileUrl, {
+                        attribution: 'Satellite imagery via Google Earth Engine',
+                        opacity: 0.9
+                    }).addTo(map);
+                    console.log('NDVI overlay added');
+                } catch (e) {
+                    console.log('NDVI layer failed to load:', e);
+                }
+            }
+            
+            // Draw polygon on map with NDVI colors if available
+            const latLngs = polygon.map(coord => [coord[1], coord[0]]);
+            console.log('LatLngs:', latLngs.length, 'points');
+            
+            // If NDVI overlay is available, make polygon semi-transparent to show colors
+            let polygonLayer;
+            if (tileUrl && tileUrl !== '') {
+                polygonLayer = L.polygon(latLngs, {
+                    color: '#ff0000',
+                    weight: 3,
+                    fillColor: '#006400',
+                    fillOpacity: 0.3
+                }).addTo(map);
+            } else {
+                polygonLayer = L.polygon(latLngs, {
+                    color: '#ff0000',
+                    weight: 3,
+                    fillColor: 'transparent',
+                    fillOpacity: 0
+                }).addTo(map);
+            }
+            
+            console.log('Polygon added');
+            
+            // Add subtle markers at polygon vertices
+            latLngs.forEach((latLng, index) => {
+                if (index % 10 === 0) { // Only show every 10th vertex to avoid clutter
+                    L.circleMarker(latLng, {
+                        radius: 3,
+                        color: '#2c3e50',
+                        fillColor: '#3498db',
+                        fillOpacity: 0.8,
+                        weight: 1
+                    }).addTo(map);
+                }
+            });
+            
+            // Zoom to polygon bounds with padding
+            map.fitBounds(polygonLayer.getBounds(), { padding: [50, 50] });
+            
+            // Add overall NDVI value display if available
+            if (tileUrl && tileUrl !== '') {
+                const ndviControl = L.control({ position: 'topright' });
+                ndviControl.onAdd = function (map) {
+                    const div = L.DomUtil.create('div', 'ndvi-control');
+                    div.style.backgroundColor = 'white';
+                    div.style.padding = '10px 15px';
+                    div.style.borderRadius = '5px';
+                    div.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+                    div.style.fontSize = '14px';
+                    div.style.fontWeight = 'bold';
+                    div.style.color = '#0f766e';
+                    div.innerHTML = '🛰️ NDVI Overlay Active';
+                    return div;
+                };
+                ndviControl.addTo(map);
+                
+                // Add NDVI scale legend
+                const legendControl = L.control({ position: 'bottomright' });
+                legendControl.onAdd = function (map) {
+                    const div = L.DomUtil.create('div', 'legend-control');
+                    div.style.backgroundColor = 'white';
+                    div.style.padding = '10px';
+                    div.style.borderRadius = '5px';
+                    div.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+                    div.style.fontSize = '12px';
+                    div.innerHTML = `
+                        <div style="font-weight: bold; margin-bottom: 8px; color: #0f766e;">NDVI Scale</div>
+                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                            <div style="width: 20px; height: 12px; background: #8B4513; margin-right: 8px;"></div>
+                            <div>-1.0 to 0.1: Non-vegetated</div>
+                        </div>
+                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                            <div style="width: 20px; height: 12px; background: #D2691E; margin-right: 8px;"></div>
+                            <div>0.1 to 0.2: Bare soil</div>
+                        </div>
+                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                            <div style="width: 20px; height: 12px; background: #FFD700; margin-right: 8px;"></div>
+                            <div>0.2 to 0.5: Sparse vegetation</div>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <div style="width: 20px; height: 12px; background: #228B22; margin-right: 8px;"></div>
+                            <div>0.6 to 0.9: Dense vegetation</div>
+                        </div>
+                    `;
+                    return div;
+                };
+                legendControl.addTo(map);
+            }
+            
+            // Hover functionality disabled due to performance issues
+            // let debounceTimer;
+            // map.on('mousemove', function(e) {
+            //     clearTimeout(debounceTimer);
+            //     debounceTimer = setTimeout(async function() {
+            //         const startDate = document.getElementById('startDate').value;
+            //         const endDate = document.getElementById('endDate').value;
+            //         
+            //         try {
+            //             const response = await fetch('/api/ndvi-at-point', {
+            //                 method: 'POST',
+            //                 headers: { 'Content-Type': 'application/json' },
+            //                 body: JSON.stringify({
+            //                     lat: e.latlng.lat,
+            //                     lng: e.latlng.lng,
+            //                     start_date: startDate,
+            //                     end_date: endDate
+            //                 })
+            //             });
+            //             
+            //             const data = await response.json();
+            //             
+            //             if (response.ok) {
+            //                 const tooltipContent = `
+            //                     <div style="padding: 5px;">
+            //                         <strong>NDVI: ${data.ndvi_value.toFixed(3)}</strong><br>
+            //                         <span style="color: ${data.color};">${data.status}</span>
+            //                     </div>
+            //                 `;
+            //                 
+            //                 if (map.tooltip) {
+            //                     map.tooltip.setLatLng(e.latlng).setContent(tooltipContent).openOn(map);
+            //                 } else {
+            //                     map.tooltip = L.tooltip({
+            //                         permanent: false,
+            //                         direction: 'top',
+            //                         className: 'ndvi-tooltip'
+            //                     }).setLatLng(e.latlng).setContent(tooltipContent).openOn(map);
+            //                 }
+            //             }
+            //         } catch (error) {
+            //             console.log('Error getting NDVI at point:', error);
+            //         }
+            //     }, 500);
+            // });
+        }
+    </script>
+</body>
+</html>

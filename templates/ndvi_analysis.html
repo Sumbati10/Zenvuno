@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>NDVI Analysis - Zenvuno</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .header-btn {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        
+        .header-btn:hover {
+            background: rgba(255,255,255,0.25);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+        
+        .section-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f766e;
+            margin-bottom: 8px;
+        }
+        
+        .section-subtitle {
+            font-size: 16px;
+            color: #64748b;
+            margin-bottom: 32px;
+        }
+        
+        .analysis-form {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #0f766e;
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
+        }
+        
+        .btn:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .btn-secondary:hover {
+            background: #f8fafc;
+        }
+        
+        .results-section {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .results-section.active {
+            display: block;
+        }
+        
+        .ndvi-value {
+            font-size: 48px;
+            font-weight: 700;
+            color: #0f766e;
+            margin-bottom: 8px;
+        }
+        
+        .ndvi-status {
+            font-size: 20px;
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-bottom: 24px;
+        }
+        
+        .alert-box {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert-box.active {
+            display: block;
+        }
+        
+        .alert-box.warning {
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            color: #92400e;
+        }
+        
+        .alert-box.danger {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #b91c1c;
+        }
+        
+        .alert-box.success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 24px;
+        }
+        
+        .stat-card {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+            display: none;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .error {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .error.active {
+            display: block;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📊 NDVI Analysis</h1>
+        <div class="header-actions">
+            <a href="/" class="header-btn">🏠 Dashboard</a>
+            <a href="/ndvi_analysis" class="header-btn">📊 NDVI Analysis</a>
+        </div>
+    </header>
+    
+    <div class="container">
+        <h1 class="section-title">NDVI Analysis</h1>
+        <p class="section-subtitle">Monitor vegetation health with near-real-time NDVI indexes, track growth stages, and identify areas requiring attention.</p>
+        
+        <div class="analysis-form">
+            <h2 style="font-size: 20px; font-weight: 600; color: #1e293b; margin-bottom: 24px;">Field Information</h2>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Field Name</label>
+                    <input type="text" id="fieldName" placeholder="Enter field name">
+                </div>
+                <div class="form-group">
+                    <label>Crop Type</label>
+                    <select id="cropType">
+                        <option value="">Select crop type...</option>
+                        <option value="corn">Corn</option>
+                        <option value="wheat">Wheat</option>
+                        <option value="soybean">Soybean</option>
+                        <option value="rice">Rice</option>
+                        <option value="cotton">Cotton</option>
+                        <option value="sugarcane">Sugarcane</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Field Coordinates (GeoJSON Polygon)</label>
+                <textarea id="coordinates" rows="4" placeholder='[[-37.9062, -0.0236], [-37.8062, -0.0236], [-37.8062, 0.0236], [-37.9062, 0.0236], [-37.9062, -0.0236]]'></textarea>
+                <p class="help-text">Enter polygon coordinates as [longitude, latitude] pairs in order, starting and ending at the same point</p>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" id="endDate">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Vegetation Index</label>
+                <select id="vegetationIndex">
+                    <option value="NDVI">NDVI (Normalized Difference Vegetation Index)</option>
+                    <option value="NDRE">NDRE (Normalized Difference Red Edge Index)</option>
+                    <option value="MSAVI">MSAVI (Modified Soil Adjusted Vegetation Index)</option>
+                    <option value="RECI">RECI (Red Edge Chlorophyll Index)</option>
+                    <option value="NDMI">NDMI (Normalized Difference Moisture Index)</option>
+                </select>
+            </div>
+            
+            <button class="btn" onclick="calculateIndex()">Calculate Index</button>
+            <button class="btn btn-secondary" onclick="loadSampleData()">Load Sample Data</button>
+        </div>
+        
+        <div id="error" class="error"></div>
+        <div id="loading" class="loading">
+            <p>Calculating vegetation index... This may take a moment.</p>
+        </div>
+        
+        <div id="results" class="results-section">
+            <h2 style="font-size: 20px; font-weight: 600; color: #1e293b; margin-bottom: 24px;">Analysis Results</h2>
+            
+            <div class="ndvi-value" id="indexValue">0.000</div>
+            <div class="ndvi-status" id="indexStatus">Status</div>
+            
+            <div id="alertBox" class="alert-box"></div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Field Name</div>
+                    <div class="stat-value" id="resultFieldName">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Crop Type</div>
+                    <div class="stat-value" id="resultCropType">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Vegetation Index</div>
+                    <div class="stat-value" id="resultIndexType">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Analysis Date</div>
+                    <div class="stat-value" id="resultDate">-</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 32px;">
+                <h3 style="font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 16px;">Recommendations</h3>
+                <div id="recommendations" style="font-size: 14px; color: #475569; line-height: 1.6;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Set default dates
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        document.getElementById('startDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+        document.getElementById('endDate').value = today.toISOString().split('T')[0];
+        
+        function loadSampleData() {
+            document.getElementById('fieldName').value = 'Sample Field - Kenya';
+            document.getElementById('cropType').value = 'corn';
+            document.getElementById('coordinates').value = '[[-37.9062, -0.0236], [-37.8062, -0.0236], [-37.8062, 0.0236], [-37.9062, 0.0236], [-37.9062, -0.0236]]';
+        }
+        
+        async function calculateIndex() {
+            const fieldName = document.getElementById('fieldName').value || 'Unnamed Field';
+            const cropType = document.getElementById('cropType').value || 'unknown';
+            const coordinatesText = document.getElementById('coordinates').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const indexType = document.getElementById('vegetationIndex').value;
+            
+            if (!coordinatesText) {
+                showError('Please enter field coordinates');
+                return;
+            }
+            
+            try {
+                const coordinates = JSON.parse(coordinatesText);
+                if (!Array.isArray(coordinates) || coordinates.length < 3) {
+                    showError('Invalid coordinates. Please provide at least 3 coordinate pairs.');
+                    return;
+                }
+            } catch (e) {
+                showError('Invalid coordinates format. Please use JSON format: [[lon1, lat1], [lon2, lat2], ...]');
+                return;
+            }
+            
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('error').classList.remove('active');
+            document.getElementById('results').classList.remove('active');
+            
+            try {
+                const response = await fetch('/api/calculate-vegetation-index', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        coordinates: JSON.parse(coordinatesText),
+                        start_date: startDate,
+                        end_date: endDate,
+                        index: indexType
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResults(data, fieldName, cropType);
+                } else {
+                    showError(data.error || 'Failed to calculate vegetation index');
+                }
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        }
+        
+        function displayResults(data, fieldName, cropType) {
+            document.getElementById('indexValue').textContent = data.current_value.toFixed(3);
+            
+            const statusDiv = document.getElementById('indexStatus');
+            statusDiv.textContent = data.status;
+            statusDiv.style.background = data.color;
+            statusDiv.style.color = 'white';
+            
+            document.getElementById('resultFieldName').textContent = fieldName;
+            document.getElementById('resultCropType').textContent = cropType.charAt(0).toUpperCase() + cropType.slice(1);
+            document.getElementById('resultIndexType').textContent = data.index_name;
+            document.getElementById('resultDate').textContent = new Date().toLocaleDateString();
+            
+            // Show alerts based on status
+            const alertBox = document.getElementById('alertBox');
+            alertBox.classList.remove('active', 'warning', 'danger', 'success');
+            
+            if (data.status.includes('Low') || data.status.includes('Stress')) {
+                alertBox.classList.add('active', 'danger');
+                alertBox.textContent = '⚠️ Alert: ' + data.status + ' detected. Immediate attention may be required.';
+            } else if (data.status.includes('Moderate')) {
+                alertBox.classList.add('active', 'warning');
+                alertBox.textContent = '⚡ Warning: ' + data.status + '. Monitor closely and consider intervention.';
+            } else {
+                alertBox.classList.add('active', 'success');
+                alertBox.textContent = '✅ Good: ' + data.status + '. Continue current management practices.';
+            }
+            
+            // Show recommendations
+            const recommendationsDiv = document.getElementById('recommendations');
+            let recommendations = '<ul style="margin-left: 20px;">';
+            recommendations += `<li>${data.best_use}</li>`;
+            
+            if (data.status.includes('Low')) {
+                recommendations += '<li>Consider irrigation if water stress is detected</li>';
+                recommendations += '<li>Check for nutrient deficiencies</li>';
+                recommendations += '<li>Monitor for pest or disease issues</li>';
+            } else if (data.status.includes('Moderate')) {
+                recommendations += '<li>Regular monitoring recommended</li>';
+                recommendations += '<li>Consider supplemental nutrition if needed</li>';
+            } else {
+                recommendations += '<li>Maintain current management practices</li>';
+                recommendations += '<li>Continue regular monitoring schedule</li>';
+            }
+            
+            recommendations += '</ul>';
+            recommendationsDiv.innerHTML = recommendations;
+            
+            document.getElementById('results').classList.add('active');
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('active');
+        }
+    </script>
+</body>
+</html>

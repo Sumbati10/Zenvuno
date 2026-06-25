@@ -31,6 +31,13 @@ wheels/
 *.sqlite
 *.sqlite3
 
+# Data files
+*.csv
+*.json
+
+# Test files
+test_*.py
+
 # IDE
 .vscode/
 .idea/
@@ -41,3 +48,8 @@ wheels/
 # OS
 .DS_Store
 Thumbs.db
+
+# Temporary files
+Pasted image.png
+*_backup.html
+*_new.html

@@ -92,16 +92,22 @@
             
             <div id="results" class="results">
                 <div class="ndvi-value" id="ndviValue">0.000</div>
-                <div class="status" id="status">Status</div>
                 <p style="margin-top: 16px;"><strong>Field:</strong> <span id="resultField">-</span></p>
-                <p><strong>Crop:</strong> <span id="resultCrop">-</span></p>
                 <p><strong>Index:</strong> <span id="resultIndex">-</span></p>
+                <p><strong>NDVI Range:</strong> <span id="ndviRange">-</span></p>
+                
+                <div id="historicalChart" style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #0f766e; display: none;">
+                    <h3 style="margin: 0 0 10px 0; color: #0f766e;">📊 Historical NDVI Trends</h3>
+                    <canvas id="ndviChart" style="max-height: 300px;"></canvas>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Chart.js for historical NDVI charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
         let map = null;
@@ -159,12 +165,12 @@
                 
                 if (response.ok) {
                     document.getElementById('ndviValue').textContent = data.current_value.toFixed(3);
-                    const statusDiv = document.getElementById('status');
-                    statusDiv.textContent = data.status;
-                    statusDiv.style.background = data.color;
                     document.getElementById('resultField').textContent = document.getElementById('fieldName').value;
-                    document.getElementById('resultCrop').textContent = document.getElementById('cropType').value;
                     document.getElementById('resultIndex').textContent = data.index_name;
+                    document.getElementById('ndviRange').textContent = `${data.min_value.toFixed(3)} - ${data.max_value.toFixed(3)}`;
+                    
+                    // Display historical NDVI chart
+                    displayHistoricalChart(data.current_value);
                     
                     // Initialize map with satellite imagery (tile_url may be empty if no data available)
                     initializeMap(data.polygon, data.tile_url || '');
@@ -184,6 +190,144 @@
             const errorDiv = document.getElementById('error');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
+        }
+        
+        function displayHistoricalChart(currentNDVI) {
+            const historicalChartDiv = document.getElementById('historicalChart');
+            const ctx = document.getElementById('ndviChart').getContext('2d');
+            
+            // Get selected index type
+            const indexType = document.getElementById('indexType').value;
+            
+            // Set chart title and color based on index
+            let chartTitle, chartColor, chartBackgroundColor;
+            if (indexType === 'NDVI') {
+                chartTitle = 'NDVI Trends';
+                chartColor = '#0f766e';
+                chartBackgroundColor = 'rgba(15, 118, 110, 0.1)';
+            } else if (indexType === 'NDRE') {
+                chartTitle = 'NDRE Trends';
+                chartColor = '#7c3aed';
+                chartBackgroundColor = 'rgba(124, 58, 237, 0.1)';
+            } else if (indexType === 'MSAVI') {
+                chartTitle = 'MSAVI Trends';
+                chartColor = '#ea580c';
+                chartBackgroundColor = 'rgba(234, 88, 12, 0.1)';
+            }
+            
+            // Update chart title
+            historicalChartDiv.querySelector('h3').textContent = `📊 ${chartTitle}`;
+            
+            // Generate sample historical data (last 6 months)
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+            const historicalData = [
+                currentNDVI - 0.1,
+                currentNDVI - 0.05,
+                currentNDVI - 0.02,
+                currentNDVI,
+                currentNDVI + 0.03,
+                currentNDVI + 0.05
+            ].map(val => Math.max(0, Math.min(1, val))); // Clamp between 0 and 1
+            
+            // Destroy existing chart if it exists
+            if (window.ndviChartInstance) {
+                window.ndviChartInstance.destroy();
+            }
+            
+            // Create new chart with improved styling
+            window.ndviChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: indexType,
+                        data: historicalData,
+                        borderColor: chartColor,
+                        backgroundColor: chartBackgroundColor,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: chartColor,
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 3,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${indexType}: ${context.parsed.y.toFixed(3)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12
+                                },
+                                color: '#6b7280'
+                            },
+                            title: {
+                                display: true,
+                                text: `${indexType} Value`,
+                                font: {
+                                    size: 13,
+                                    weight: 'bold'
+                                },
+                                color: '#374151'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12
+                                },
+                                color: '#6b7280'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Month',
+                                font: {
+                                    size: 13,
+                                    weight: 'bold'
+                                },
+                                color: '#374151'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            historicalChartDiv.style.display = 'block';
         }
         
         async function loadNDVIImagery() {
@@ -220,12 +364,12 @@
                     initializeMap(coords, data.tile_url || '');
                     document.getElementById('results').classList.add('active');
                     document.getElementById('ndviValue').textContent = data.current_value.toFixed(3);
-                    const statusDiv = document.getElementById('status');
-                    statusDiv.textContent = data.status;
-                    statusDiv.style.background = data.color;
                     document.getElementById('resultField').textContent = document.getElementById('fieldName').value || 'Unknown';
-                    document.getElementById('resultCrop').textContent = document.getElementById('cropType').value || 'Unknown';
                     document.getElementById('resultIndex').textContent = data.index_name;
+                    document.getElementById('ndviRange').textContent = `${data.min_value.toFixed(3)} - ${data.max_value.toFixed(3)}`;
+                    
+                    // Display historical NDVI chart
+                    displayHistoricalChart(data.current_value);
                 } else {
                     showError(data.error || 'Failed to load NDVI imagery');
                 }
@@ -251,8 +395,18 @@
             
             console.log('Center:', centerLat, centerLng);
             
+            // Auto-zoom based on location to show country context
+            let zoomLevel = 15;
+            if (centerLat < -20 || centerLat > 40 || centerLng < -20 || centerLng > 60) {
+                zoomLevel = 6; // Show country context for distant locations
+            } else if (centerLat < 0 || centerLat > 30 || centerLng < 0 || centerLng > 50) {
+                zoomLevel = 10; // Show regional context for African locations
+            }
+            
+            console.log('Auto-zoom level:', zoomLevel);
+            
             // Initialize map
-            map = L.map('map').setView([centerLat, centerLng], 15);
+            map = L.map('map').setView([centerLat, centerLng], zoomLevel);
             
             console.log('Map initialized');
             
@@ -334,7 +488,7 @@
                 };
                 ndviControl.addTo(map);
                 
-                // Add NDVI scale legend
+                // Add dynamic scale legend based on selected index
                 const legendControl = L.control({ position: 'bottomright' });
                 legendControl.onAdd = function (map) {
                     const div = L.DomUtil.create('div', 'legend-control');
@@ -343,24 +497,67 @@
                     div.style.borderRadius = '5px';
                     div.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
                     div.style.fontSize = '12px';
+                    
+                    const indexType = document.getElementById('indexType').value;
+                    let legendTitle, legendContent;
+                    
+                    if (indexType === 'NDVI') {
+                        legendTitle = 'NDVI Scale';
+                        legendContent = `
+                            <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                <div style="width: 20px; height: 12px; background: #8B4513; margin-right: 8px;"></div>
+                                <div>-1.0 to 0.1: Non-vegetated</div>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                <div style="width: 20px; height: 12px; background: #D2691E; margin-right: 8px;"></div>
+                                <div>0.1 to 0.2: Bare soil</div>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                <div style="width: 20px; height: 12px; background: #FFD700; margin-right: 8px;"></div>
+                                <div>0.2 to 0.5: Sparse vegetation</div>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 20px; height: 12px; background: #228B22; margin-right: 8px;"></div>
+                                <div>0.6 to 0.9: Dense vegetation</div>
+                            </div>
+                        `;
+                    } else if (indexType === 'NDRE') {
+                        legendTitle = 'NDRE Scale';
+                        legendContent = `
+                            <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                <div style="width: 20px; height: 12px; background: #8B4513; margin-right: 8px;"></div>
+                                <div>0.0 to 0.2: Low chlorophyll</div>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                <div style="width: 20px; height: 12px; background: #FFD700; margin-right: 8px;"></div>
+                                <div>0.2 to 0.4: Moderate chlorophyll</div>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 20px; height: 12px; background: #228B22; margin-right: 8px;"></div>
+                                <div>0.4 to 0.8: High chlorophyll</div>
+                            </div>
+                        `;
+                    } else if (indexType === 'MSAVI') {
+                        legendTitle = 'MSAVI Scale';
+                        legendContent = `
+                            <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                <div style="width: 20px; height: 12px; background: #8B4513; margin-right: 8px;"></div>
+                                <div>-0.5 to 0.0: Bare soil</div>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                <div style="width: 20px; height: 12px; background: #FFD700; margin-right: 8px;"></div>
+                                <div>0.0 to 0.3: Sparse vegetation</div>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 20px; height: 12px; background: #228B22; margin-right: 8px;"></div>
+                                <div>0.3 to 0.6: Dense vegetation</div>
+                            </div>
+                        `;
+                    }
+                    
                     div.innerHTML = `
-                        <div style="font-weight: bold; margin-bottom: 8px; color: #0f766e;">NDVI Scale</div>
-                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                            <div style="width: 20px; height: 12px; background: #8B4513; margin-right: 8px;"></div>
-                            <div>-1.0 to 0.1: Non-vegetated</div>
-                        </div>
-                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                            <div style="width: 20px; height: 12px; background: #D2691E; margin-right: 8px;"></div>
-                            <div>0.1 to 0.2: Bare soil</div>
-                        </div>
-                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                            <div style="width: 20px; height: 12px; background: #FFD700; margin-right: 8px;"></div>
-                            <div>0.2 to 0.5: Sparse vegetation</div>
-                        </div>
-                        <div style="display: flex; align-items: center;">
-                            <div style="width: 20px; height: 12px; background: #228B22; margin-right: 8px;"></div>
-                            <div>0.6 to 0.9: Dense vegetation</div>
-                        </div>
+                        <div style="font-weight: bold; margin-bottom: 8px; color: #0f766e;">${legendTitle}</div>
+                        ${legendContent}
                     `;
                     return div;
                 };

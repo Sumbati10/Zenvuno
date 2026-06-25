@@ -142,14 +142,22 @@ def calculate_vegetation_index():
         
         # Calculate statistics
         stats = index_band.reduceRegion(
-            reducer=ee.Reducer.mean(),
+            reducer=ee.Reducer.mean().combine(
+                ee.Reducer.min(),
+                sharedInputs=True
+            ).combine(
+                ee.Reducer.max(),
+                sharedInputs=True
+            ),
             geometry=geometry,
             scale=10,
             maxPixels=1e10
         )
         
         index_stats = stats.getInfo()
-        current_value = index_stats.get(index_name, 0)
+        current_value = index_stats.get(f'{index_name}_mean', 0)
+        min_value = index_stats.get(f'{index_name}_min', 0)
+        max_value = index_stats.get(f'{index_name}_max', 0)
         
         # Get index description
         index_info = get_index_description(index_name)
@@ -175,6 +183,8 @@ def calculate_vegetation_index():
         
         return jsonify({
             'current_value': current_value,
+            'min_value': min_value,
+            'max_value': max_value,
             'index_name': index_name,
             'status': status,
             'color': color,

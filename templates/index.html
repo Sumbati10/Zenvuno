@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zenvuno - Vegetation Health Monitoring</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Draw CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .sidebar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 350px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 20px;
+            z-index: 1000;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        
+        .sidebar h1 {
+            font-size: 24px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .sidebar p {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #219a52;
+        }
+        
+        .btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .date-inputs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .date-inputs input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .results {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+            display: none;
+        }
+        
+        .results.active {
+            display: block;
+        }
+        
+        .ndvi-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .ndvi-status {
+            font-size: 18px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: white;
+            font-weight: 500;
+        }
+        
+        .legend {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .legend h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            margin-right: 10px;
+        }
+        
+        .timeseries {
+            margin-top: 15px;
+        }
+        
+        .timeseries h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .timeseries-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        
+        .timeseries-table th,
+        .timeseries-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .timeseries-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .instructions {
+            background: #e8f5e8;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #2c3e50;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+            margin-top: 8px;
+        }
+        
+        .instructions li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="sidebar">
+        <h1>🌱 Zenvuno</h1>
+        <p>Vegetation Health Monitoring</p>
+        
+        <div class="instructions">
+            <strong>How to use:</strong>
+            <ol>
+                <li>Use the drawing tools (pentagon icon) on the map</li>
+                <li>Draw a polygon around your farm area</li>
+                <li>Click "Calculate NDVI" to analyze</li>
+            </ol>
+        </div>
+        
+        <div class="date-inputs">
+            <div>
+                <label style="font-size: 12px; color: #666;">Start Date</label>
+                <input type="date" id="startDate" value="2024-01-01">
+            </div>
+            <div>
+                <label style="font-size: 12px; color: #666;">End Date</label>
+                <input type="date" id="endDate" value="2025-01-01">
+            </div>
+        </div>
+        
+        <button class="btn" id="calculateBtn" onclick="calculateNDVI()" disabled>
+            📊 Calculate NDVI
+        </button>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="loading" class="loading" style="display: none;">
+            Calculating NDVI... This may take a moment.
+        </div>
+        
+        <div id="results" class="results">
+            <div class="ndvi-value" id="ndviValue">0.000</div>
+            <div class="ndvi-status" id="ndviStatus">Status</div>
+            
+            <div class="legend">
+                <h3>NDVI Scale</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #8B4513;"></div>
+                    <span>&lt; 0.2 - Bare soil / very sparse vegetation</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #FFFF00;"></div>
+                    <span>0.2–0.4 - Low vegetation</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #90EE90;"></div>
+                    <span>0.4–0.6 - Moderate vegetation</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #228B22;"></div>
+                    <span>0.6–0.8 - Healthy vegetation</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #006400;"></div>
+                    <span>&gt; 0.8 - Very dense vegetation</span>
+                </div>
+            </div>
+            
+            <div class="timeseries">
+                <h3>Monthly NDVI Time Series</h3>
+                <table class="timeseries-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>NDVI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timeseriesBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Draw JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    
+    <script>
+        // Initialize map centered on Kenya
+        const map = L.map('map').setView([-0.0236, 37.9062], 6);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Initialize draw control
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        
+        const drawControl = new L.Control.Draw({
+            draw: {
+                polygon: {
+                    allowIntersection: false,
+                    showArea: true
+                },
+                rectangle: true,
+                circle: false,
+                circlemarker: false,
+                marker: false,
+                polyline: false
+            },
+            edit: {
+                featureGroup: drawnItems
+            }
+        });
+        map.addControl(drawControl);
+        
+        let currentPolygon = null;
+        
+        // Handle draw events
+        map.on(L.Draw.Event.CREATED, function(event) {
+            const layer = event.layer;
+            drawnItems.clearLayers();
+            drawnItems.addLayer(layer);
+            
+            if (event.layerType === 'polygon' || event.layerType === 'rectangle') {
+                currentPolygon = layer.getLatLngs()[0];
+                document.getElementById('calculateBtn').disabled = false;
+            }
+        });
+        
+        map.on(L.Draw.Event.DELETED, function(event) {
+            currentPolygon = null;
+            document.getElementById('calculateBtn').disabled = true;
+            document.getElementById('results').classList.remove('active');
+        });
+        
+        // Convert Leaflet LatLng to coordinate array
+        function latLngToCoords(latLngs) {
+            return latLngs.map(ll => [ll.lng, ll.lat]);
+        }
+        
+        // Calculate NDVI
+        async function calculateNDVI() {
+            if (!currentPolygon) {
+                showError('Please draw a polygon first');
+                return;
+            }
+            
+            const coordinates = latLngToCoords(currentPolygon);
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('calculateBtn').disabled = true;
+            
+            try {
+                const response = await fetch('/api/calculate-ndvi', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        coordinates: coordinates,
+                        start_date: startDate,
+                        end_date: endDate
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResults(data);
+                } else {
+                    showError(data.error || 'Failed to calculate NDVI');
+                }
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('calculateBtn').disabled = false;
+            }
+        }
+        
+        function displayResults(data) {
+            document.getElementById('ndviValue').textContent = data.current_ndvi.toFixed(3);
+            
+            const statusDiv = document.getElementById('ndviStatus');
+            statusDiv.textContent = data.status;
+            statusDiv.style.background = data.color;
+            
+            // Color the polygon on the map
+            if (drawnItems.getLayers().length > 0) {
+                drawnItems.getLayers()[0].setStyle({
+                    color: data.color,
+                    fillColor: data.color,
+                    fillOpacity: 0.3
+                });
+            }
+            
+            // Display time series
+            const tbody = document.getElementById('timeseriesBody');
+            tbody.innerHTML = '';
+            
+            data.timeseries.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.date}</td>
+                    <td>${row.NDVI.toFixed(3)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            document.getElementById('results').classList.add('active');
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
